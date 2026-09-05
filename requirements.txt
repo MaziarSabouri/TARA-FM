@@ -1,0 +1,26 @@
+# Companion env for data prep, Flow Matching training, RL fine-tuning, and sampling.
+#
+#   conda create -n rlfm python=3.10 -y
+#   conda activate rlfm
+#   pip install -r requirements.txt
+#
+# numpy is pinned <2 for pandas/SimpleITK ABI compatibility during prepare_dataset.
+
+flow_matching
+monai_generative==0.2.3
+torch==2.5.1
+torchvision
+xformers
+pytorch-lightning
+tensorboard
+PyYAML==6.0.2
+tqdm==4.67.1
+matplotlib
+scikit-learn
+scipy
+numpy<2
+pandas
+openpyxl
+SimpleITK
+nibabel
+Pillow
