@@ -6,7 +6,8 @@ Raw patient images and labels are **not** shipped with this repository. Contact 
 
 Point `prepare_dataset.py` at:
 
-- `--excel_path`: Excel workbook with `Train` and `External` sheets  
+- `--excel_path`: Excel workbook with a `Train` sheet
+  (`External` is optional and not read when `--skip_external` is used)
   (`Folder` = patient subfolder; `Class1` = disease label)
 - `--data_root`: directory of per-patient folders  
   - `<Folder>/<Folder>.dcm` — planar scintigraphy (DICOM)  
@@ -21,13 +22,8 @@ python prepare_dataset.py \
   --excel_path /path/to/metadata.xlsx \
   --data_root /path/to/Image_and_Segmentation \
   --output_dir ./data \
-  --image_size 128
-```
-
-Optional visualization:
-
-```bash
-python visualize_dataset.py --pickle_path data/train_data_128.pkl --output_dir data/viz
+  --image_size 128 \
+  --skip_external
 ```
 
 ## Pickle schema
@@ -42,7 +38,7 @@ python visualize_dataset.py --pickle_path data/train_data_128.pkl --output_dir d
 }
 ```
 
-**`external_data_128.pkl`** (held-out evaluation; not required for FM/RL training)
+**`external_data_128.pkl`** (optional preprocessing output; never read by FM/RL)
 
 ```text
 {

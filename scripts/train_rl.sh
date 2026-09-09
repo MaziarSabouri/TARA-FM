@@ -5,6 +5,10 @@
 #   CLASSIFIER_REWARD_CKPT=checkpoints/reward/your_reward.pth \
 #   FM_CKPT=checkpoints/fm/....ckpt \
 #   bash scripts/train_rl.sh
+#
+# After training, select among step*.ckpt / last.ckpt using a short downstream
+# probe on the *development* validation split only. Do not use the external
+# holdout for RL checkpoint selection; reserve it for final evaluation.
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
@@ -24,6 +28,14 @@ esac
 
 export REWARD_TYPE
 export CLASSIFIER_REWARD_CKPT
+export REWARD_FOCAL_GAMMA="${REWARD_FOCAL_GAMMA:-2.0}"
+export REWARD_UTILITY_WRONG_PENALTY="${REWARD_UTILITY_WRONG_PENALTY:-1.0}"
+
+IFS=',' read -r -a REWARD_CKPTS <<< "$CLASSIFIER_REWARD_CKPT"
+if [[ "${#REWARD_CKPTS[@]}" -ne 3 ]]; then
+  echo "The paper protocol requires exactly three comma-separated reward checkpoints." >&2
+  exit 1
+fi
 
 # Optional: isolate runs by reward name under checkpoints/rl/<type>
 CHECKPOINT_DIR="${CHECKPOINT_DIR:-checkpoints/rl/${REWARD_TYPE}}"
@@ -32,6 +44,7 @@ echo "RL fine-tune: REWARD_TYPE=$REWARD_TYPE"
 echo "  CLASSIFIER_REWARD_CKPT=$CLASSIFIER_REWARD_CKPT"
 echo "  FM_CKPT=$FM_CKPT"
 echo "  CHECKPOINT_DIR=$CHECKPOINT_DIR"
+echo "  gamma=$REWARD_FOCAL_GAMMA utility_eta=$REWARD_UTILITY_WRONG_PENALTY"
 
 python rl_trainier.py \
   --config_path "$CONFIG" \

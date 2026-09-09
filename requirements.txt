@@ -6,21 +6,19 @@
 #
 # numpy is pinned <2 for pandas/SimpleITK ABI compatibility during prepare_dataset.
 
-flow_matching
+flow_matching==1.0.10
 monai_generative==0.2.3
 torch==2.5.1
-torchvision
-xformers
-pytorch-lightning
+torchvision==0.20.1
+xformers==0.0.29.post1
+pytorch-lightning==2.6.5
 tensorboard
 PyYAML==6.0.2
 tqdm==4.67.1
 matplotlib
-scikit-learn
-scipy
 numpy<2
 pandas
 openpyxl
 SimpleITK
-nibabel
 Pillow
+pytest

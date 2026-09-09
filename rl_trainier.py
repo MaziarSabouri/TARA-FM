@@ -33,6 +33,7 @@ from utils.checkpoint_utils import (
     resolve_resume_checkpoint,
 )
 from utils.solver_utils import build_solver_config
+from utils.rl_objectives import group_topk_weights
 from fm_lightning import FlowMatchingDataModule
 from rewards import compute_rewards
 
@@ -66,32 +67,6 @@ def _group_softmax_weights(
     if weight_clip is not None and weight_clip > 1.0:
         w = w.clamp(min=1.0 / float(weight_clip), max=float(weight_clip))
         w = w / (w.mean(dim=1, keepdim=True) + 1e-8)
-    return w.view(-1).detach()
-
-
-def _group_topk_weights(
-    rewards: torch.Tensor,
-    group_size: int,
-    top_k: int,
-    reward_floor: Optional[float] = None,
-) -> torch.Tensor:
-    """Hard best-of-N selection: keep the top `top_k` candidates per group, drop the rest.
-
-    Lower variance than the exponential weights when the group is small (G=4 gives
-    a 4-sample estimate of the advantage z-score), and it is the standard
-    rejection-sampling / RAFT weighting. `reward_floor` additionally discards
-    accepted candidates whose absolute reward is too low, so a group in which
-    every rollout is bad contributes no gradient instead of distilling its least
-    bad member. Groups with nothing kept get all-zero weights.
-    """
-    r = rewards.view(-1, group_size)
-    k_eff = max(1, min(int(top_k), group_size))
-    keep = torch.zeros_like(r)
-    keep.scatter_(1, r.topk(k_eff, dim=1).indices, 1.0)
-    if reward_floor is not None:
-        keep = keep * (r >= float(reward_floor)).to(keep.dtype)
-    n_keep = keep.sum(dim=1, keepdim=True)
-    w = torch.where(n_keep > 0, keep * (group_size / n_keep.clamp_min(1.0)), keep)
     return w.view(-1).detach()
 
 
@@ -275,7 +250,7 @@ class RLFlowMatchingLightningModule(pl.LightningModule):
 
         top_k = int(self.hparams.get("reward_topk", 0) or 0)
         if top_k > 0:
-            weights = _group_topk_weights(
+            weights = group_topk_weights(
                 rewards,
                 group_size=G,
                 top_k=top_k,
@@ -349,7 +324,6 @@ class RLFlowMatchingLightningModule(pl.LightningModule):
             self,
             mask_conditioning=self.mask_conditioning,
             class_conditioning=self.class_conditioning,
-            label="RL",
         )
 
 
@@ -506,7 +480,7 @@ def main():
     parser = argparse.ArgumentParser(
         description="GRPO-style training for Flow Matching with configurable rewards."
     )
-    parser.add_argument("--config_path", type=str, default="configs/mask_conditioning.yaml")
+    parser.add_argument("--config_path", type=str, default="configs/rl_mask_class.yaml")
     parser.add_argument(
         "--model_path", type=str, default=None, help="Path to Lightning .ckpt file or dir"
     )

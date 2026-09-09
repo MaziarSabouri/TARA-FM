@@ -1,19 +1,27 @@
-# Task-Aware RL of Flow Matching for Thyroid Scintigraphy
+# Task-Aware Reinforcement Learning of Flow Matching
 
-Companion code for the IEEE TMI manuscript:
+Minimal code companion to the IEEE *Transactions on Medical Imaging* paper
+**“Task-Aware Reinforcement Learning of Flow Matching: Aligning Thyroid
+Scintigraphy Augmentation With Downstream Classification.”**
 
-**Task-Aware Reinforcement Learning of Flow Matching: Aligning Thyroid Scintigraphy Augmentation With Downstream Classification**
+This release contains only:
 
-This repository contains the minimal pipeline used in the paper:
+- preparation of the development dataset;
+- mask- and class-conditioned Flow Matching (FM) training;
+- RL fine-tuning with the paper’s Soft, Focal, and Utility rewards; and
+- FM/RL image generation.
 
-1. Preprocess a thyroid scintigraphy dataset into training pickles  
-2. Train base **mask + class** conditioned Flow Matching (FM)  
-3. Fine-tune with three RL rewards: `prob`, `focal`, `utility`  
-4. Sample synthetic image pools from FM / RL checkpoints  
+Downstream classifier training, external evaluation, radiomics, statistics, and
+figure-generation code are intentionally omitted. The frozen three-member
+ResNet-18 reward ensemble is an input to RL, but its training pipeline and
+weights are not distributed.
 
-Patient data and trained weights are **not** included. Contact the authors for access.
+Patient data and trained weights are not included. They are available only
+subject to institutional agreements.
 
-## Install
+## Installation
+
+Python 3.10 and a CUDA-capable GPU are recommended.
 
 ```bash
 conda create -n rlfm python=3.10 -y
@@ -21,67 +29,88 @@ conda activate rlfm
 pip install -r requirements.txt
 ```
 
-A CUDA-capable GPU is required for FM/RL training and sampling.
+## Data
 
-## Preprocess
+Configs expect `data/train_data_128.pkl`, containing development `train` and
+`valid` splits. See [`data/README.md`](data/README.md) for the schema and raw-data
+conversion command.
 
-```bash
-EXCEL_PATH=/path/to/metadata.xlsx \
-DATA_ROOT=/path/to/Image_and_Segmentation \
-bash scripts/preprocess.sh
-```
+The external cohort is neither required nor accessed by this repository.
 
-See [`data/README.md`](data/README.md) for the pickle schema. Configs expect `./data/train_data_128.pkl`.
-
-## Train base FM
+## 1. Train the base FM
 
 ```bash
 bash scripts/train_fm.sh
 ```
 
-Checkpoints are written under `checkpoints/fm/` (see [`checkpoints/README.md`](checkpoints/README.md)).
+The paper recipe is in `configs/fm_mask_class.yaml`: 200 epochs, Adam with
+learning rate \(10^{-4}\), effective batch size 256, and mask plus four-class
+conditioning.
 
-## Train RL (three rewards)
+## 2. Fine-tune the three RL variants
 
-Provide a frozen reward classifier checkpoint and the base FM weights, then choose a reward:
-
-```bash
-export CLASSIFIER_REWARD_CKPT=checkpoints/reward/reward_resnet18.pth
-export FM_CKPT=checkpoints/fm/<your_fm>.ckpt
-
-REWARD_TYPE=prob    bash scripts/train_rl.sh
-REWARD_TYPE=focal   bash scripts/train_rl.sh
-REWARD_TYPE=utility bash scripts/train_rl.sh
-```
-
-Each run writes to `checkpoints/rl/<REWARD_TYPE>/`. Optional realism / coverage terms are documented in `rewards.py` (env vars); the paper’s main comparisons use the three `REWARD_TYPE` settings above.
-
-## Sample synthetics
+Supply the base FM checkpoint and the three frozen ResNet-18 judge checkpoints
+as a comma-separated ensemble:
 
 ```bash
-MODEL_PATH=checkpoints/fm/<your_fm>.ckpt \
-OUT=data/samples_fm.pkl \
-bash scripts/sample.sh
+export FM_CKPT=checkpoints/fm/<base-fm>.ckpt
+export CLASSIFIER_REWARD_CKPT=checkpoints/reward/fold0.pth,checkpoints/reward/fold1.pth,checkpoints/reward/fold2.pth
 
-MODEL_PATH=checkpoints/rl/prob/<your_rl>.ckpt \
-OUT=data/samples_rl_prob.pkl \
+REWARD_TYPE=prob    bash scripts/train_rl.sh  # Soft-RL
+REWARD_TYPE=focal   bash scripts/train_rl.sh  # Focal-RL
+REWARD_TYPE=utility bash scripts/train_rl.sh  # Utility-RL
+```
+
+The reported RL recipe performs 4,000 Adam updates at learning rate \(10^{-5}\),
+with four rollouts per condition, hard top-2 selection, a 0.3 real-data anchor,
+a 0.05 frozen-base velocity regularizer, unit-norm gradient clipping, and ten
+Euler steps per rollout. Checkpoints are saved every 1,000 updates.
+
+The reward checkpoint format is documented in
+[`checkpoints/README.md`](checkpoints/README.md).
+
+## 3. Select and sample a checkpoint
+
+RL checkpoints must be selected using development validation only—never the
+external cohort. See [`docs/CHECKPOINT_SELECTION.md`](docs/CHECKPOINT_SELECTION.md).
+
+```bash
+MODEL_PATH=checkpoints/rl/prob/<selected>.ckpt \
+OUT=data/samples_rl_soft.pkl \
 bash scripts/sample.sh
 ```
 
-Override `PER_CLASS`, `STEPS`, `BATCH`, and `SEED` as needed.
+`PER_CLASS`, `STEPS`, `BATCH`, `SEED`, and `GEN_SPLIT` can be overridden.
+
+## Method-to-code alignment
+
+[`docs/METHOD_ALIGNMENT.md`](docs/METHOD_ALIGNMENT.md) maps each paper equation
+to its implementation and records the fixed experiment constants. Formula-level
+tests are in `tests/test_formulas.py`.
+
+## Repository map
+
+| Path | Purpose |
+|---|---|
+| `fm_lightning.py`, `trainer.py` | Conditional FM objective and training |
+| `rl_trainier.py` | Top-\(k\) self-distillation and anchored RL loss |
+| `rewards.py` | Soft, Focal, and Utility reward equations |
+| `utils/reward_model.py` | Frozen ResNet-18 ensemble loader |
+| `inferer.py` | Euler/ODE image generation |
+| `configs/` | Exact paper FM and RL recipes |
+| `scripts/` | Data preparation, FM/RL training, and sampling |
 
 ## Citation
 
 ```bibtex
-@article{Sabouri2026TMI,
+@article{sabouri2026taskaware,
   title   = {Task-Aware Reinforcement Learning of Flow Matching: Aligning Thyroid Scintigraphy Augmentation With Downstream Classification},
-  author  = {Sabouri, Maziar and Yazdani, Milad and others},
+  author  = {Sabouri, Maziar and Yazdani, Milad and Bayasi, Nourhan and others},
   journal = {IEEE Transactions on Medical Imaging},
   year    = {2026},
-  note    = {Under review / to appear}
+  note    = {Under review}
 }
 ```
 
-## License / data
-
-Code is provided for research reproducibility. Dataset and model weights require institutional agreements; please contact the corresponding authors.
+This research release does not grant rights to patient data or model weights.
+Contact the authors regarding reuse.

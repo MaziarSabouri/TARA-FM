@@ -32,7 +32,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--config_path",
         type=str,
-        default="configs/default.yaml",
+        default="configs/fm_mask_class.yaml",
         help="Path to the configuration file.",
     )
     parser.add_argument(

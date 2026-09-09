@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Sample a synthetic pool from an FM or RL checkpoint.
 #
+# Prefer an RL checkpoint chosen by development-validation probing (not last.ckpt
+# and not by external metrics). Example:
 #   MODEL_PATH=checkpoints/fm/....ckpt bash scripts/sample.sh
-#   MODEL_PATH=checkpoints/rl/prob/....ckpt OUT=data/samples_rl_prob.pkl bash scripts/sample.sh
+#   MODEL_PATH=checkpoints/rl/prob/best.ckpt OUT=data/samples_rl_prob.pkl bash scripts/sample.sh
 set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"

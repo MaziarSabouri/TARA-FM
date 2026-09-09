@@ -237,7 +237,6 @@ def save_validation_outputs(
     *,
     mask_conditioning: bool,
     class_conditioning: bool,
-    label: str = "val",
 ) -> None:
     if hasattr(module.trainer, "is_global_zero") and not module.trainer.is_global_zero:
         return
@@ -256,18 +255,6 @@ def save_validation_outputs(
         max_samples=tr.get("num_val_samples", 16),
         mask_conditioning=mask_conditioning,
         class_conditioning=class_conditioning,
-    )
-
-    from utils.fid_utils import log_fid_metrics
-
-    log_fid_metrics(
-        module,
-        val_loader,
-        solver_args,
-        tr,
-        mask_conditioning=mask_conditioning,
-        class_conditioning=class_conditioning,
-        label=label,
     )
 
 

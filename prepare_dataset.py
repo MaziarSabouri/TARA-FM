@@ -13,8 +13,8 @@ Outputs (written to --output_dir):
   - train_data_128.pkl: {"train": [...], "valid": [...], "class_names": [...]}
       built from the "Train" sheet, split per-class (stratified) so it can be
       consumed directly by trainer.py / fm_lightning.py.
-  - external_data_128.pkl: {"external": [...], "class_names": [...]}
-      built from the "External" sheet, kept fully held out for evaluation.
+  - external_data_128.pkl (optional): {"external": [...], "class_names": [...]}
+      built only when --skip_external is not passed; never used by FM/RL.
   - class_map.json: human-readable class name <-> index mapping.
 
 Each sample dict has:
@@ -82,14 +82,10 @@ CLASS1_MAP = {
     "TH": "Thyroiditis",
 }
 
-DEFAULT_EXCEL_PATH = "/home/msabouri/Projects/05-RL with Milad/Dataset/Thyroid_V04.xlsx"
-DEFAULT_DATA_ROOT = "/home/msabouri/Projects/05-RL with Milad/Dataset/Image_and_Segmentation"
-
-
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--excel_path", default=DEFAULT_EXCEL_PATH)
-    parser.add_argument("--data_root", default=DEFAULT_DATA_ROOT)
+    parser.add_argument("--excel_path", required=True, help="Path to the metadata workbook.")
+    parser.add_argument("--data_root", required=True, help="Root of patient image/mask folders.")
     parser.add_argument(
         "--output_dir",
         default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "data"),
@@ -102,6 +98,11 @@ def parse_args() -> argparse.Namespace:
         help="Fraction of the 'Train' sheet held out per-class as the FM 'valid' split.",
     )
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--skip_external",
+        action="store_true",
+        help="Build development train/valid data only (recommended for this FM/RL release).",
+    )
     return parser.parse_args()
 
 
@@ -294,32 +295,39 @@ def main() -> None:
 
     print(f"Reading 'Train' sheet from {args.excel_path} ...")
     train_pool = load_sheet_samples(args.excel_path, args.data_root, "Train", args.image_size)
-    print(f"Reading 'External' sheet from {args.excel_path} ...")
-    external_samples = load_sheet_samples(args.excel_path, args.data_root, "External", args.image_size)
 
     train_samples, valid_samples = stratified_split(train_pool, args.val_frac, args.seed)
 
     print_class_counts("train", train_samples)
     print_class_counts("valid", valid_samples)
-    print_class_counts("external", external_samples)
 
     train_pkl = {"train": train_samples, "valid": valid_samples, "class_names": CLASS_NAMES}
-    external_pkl = {"external": external_samples, "class_names": CLASS_NAMES}
 
     train_path = os.path.join(args.output_dir, "train_data_128.pkl")
-    external_path = os.path.join(args.output_dir, "external_data_128.pkl")
     class_map_path = os.path.join(args.output_dir, "class_map.json")
 
     with open(train_path, "wb") as f:
         pickle.dump(train_pkl, f, protocol=pickle.HIGHEST_PROTOCOL)
-    with open(external_path, "wb") as f:
-        pickle.dump(external_pkl, f, protocol=pickle.HIGHEST_PROTOCOL)
     with open(class_map_path, "w") as f:
         json.dump({"class_names": CLASS_NAMES, "class_to_idx": CLASS_TO_IDX}, f, indent=2)
 
     print(f"Saved {train_path}")
-    print(f"Saved {external_path}")
     print(f"Saved {class_map_path}")
+
+    if not args.skip_external:
+        print(f"Reading 'External' sheet from {args.excel_path} ...")
+        external_samples = load_sheet_samples(
+            args.excel_path, args.data_root, "External", args.image_size
+        )
+        print_class_counts("external", external_samples)
+        external_path = os.path.join(args.output_dir, "external_data_128.pkl")
+        with open(external_path, "wb") as f:
+            pickle.dump(
+                {"external": external_samples, "class_names": CLASS_NAMES},
+                f,
+                protocol=pickle.HIGHEST_PROTOCOL,
+            )
+        print(f"Saved {external_path}")
 
 
 if __name__ == "__main__":

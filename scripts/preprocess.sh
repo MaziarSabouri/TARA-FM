@@ -14,4 +14,5 @@ python prepare_dataset.py \
   --data_root "$DATA_ROOT" \
   --output_dir "$OUTPUT_DIR" \
   --image_size "$IMAGE_SIZE" \
+  --skip_external \
   "$@"

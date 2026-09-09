@@ -32,34 +32,28 @@ fm_train_args:
   val_freq: 5
   device: "cuda"
   num_val_samples: 12
-  fid_num_samples: 32
   checkpoint_dir: checkpoints/fm
   num_workers: 4
   pin_memory: true
 
 rl_train_args:
   num_epochs: 80
-  max_updates: 10000
+  max_updates: 4000
   batch_size: 1
   lr: 0.00001
   val_freq: 5
   num_val_samples: 4
-  fid_num_samples: 8
   checkpoint_dir: checkpoints/rl
   num_workers: 4
   pin_memory: true
   objective: "self_distill"
   group_size: 4
   reward_topk: 2
-  reward_floor: null
   real_anchor_weight: 0.3
-  reward_temperature: 0.5
-  adv_alpha: null
-  weight_clip: 5.0
   ref_reg_weight: 0.05
   grad_clip_norm: 1.0
   num_inference_steps: 10
-  ckpt_every_n_steps: 2000
+  ckpt_every_n_steps: 1000
   gradient_accumulation_steps: 1
 
 solver_args:

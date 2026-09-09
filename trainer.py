@@ -174,7 +174,7 @@ def main() -> None:
     parser.add_argument(
         "--config_path",
         type=str,
-        default="configs/mask_conditioning.yaml",
+        default="configs/fm_mask_class.yaml",
         help="Path to the configuration file.",
     )
     parser.add_argument(
