@@ -1,6 +1,6 @@
 # Task-Aware Reinforcement Learning of Flow Matching
 
-Minimal code companion to the IEEE *Transactions on Medical Imaging* paper
+Minimal code companion to the paper
 **“Task-Aware Reinforcement Learning of Flow Matching: Aligning Thyroid
 Scintigraphy Augmentation With Downstream Classification.”**
 
@@ -10,11 +10,6 @@ This release contains only:
 - mask- and class-conditioned Flow Matching (FM) training;
 - RL fine-tuning with the paper’s Soft, Focal, and Utility rewards; and
 - FM/RL image generation.
-
-Downstream classifier training, external evaluation, radiomics, statistics, and
-figure-generation code are intentionally omitted. The frozen three-member
-ResNet-18 reward ensemble is an input to RL, but its training pipeline and
-weights are not distributed.
 
 Patient data and trained weights are not included. They are available only
 subject to institutional agreements.
@@ -29,10 +24,12 @@ conda activate rlfm
 pip install -r requirements.txt
 ```
 
+
+
 ## Data
 
 Configs expect `data/train_data_128.pkl`, containing development `train` and
-`valid` splits. See [`data/README.md`](data/README.md) for the schema and raw-data
+`valid` splits. See `[data/README.md](data/README.md)` for the schema and raw-data
 conversion command.
 
 The external cohort is neither required nor accessed by this repository.
@@ -43,9 +40,7 @@ The external cohort is neither required nor accessed by this repository.
 bash scripts/train_fm.sh
 ```
 
-The paper recipe is in `configs/fm_mask_class.yaml`: 200 epochs, Adam with
-learning rate \(10^{-4}\), effective batch size 256, and mask plus four-class
-conditioning.
+The paper recipe is in `configs/fm_mask_class.yaml`: 200 epochs, Adam with learning rate (1e-4), effective batch size 256, and mask plus four-class conditioning.
 
 ## 2. Fine-tune the three RL variants
 
@@ -61,18 +56,15 @@ REWARD_TYPE=focal   bash scripts/train_rl.sh  # Focal-RL
 REWARD_TYPE=utility bash scripts/train_rl.sh  # Utility-RL
 ```
 
-The reported RL recipe performs 4,000 Adam updates at learning rate \(10^{-5}\),
-with four rollouts per condition, hard top-2 selection, a 0.3 real-data anchor,
-a 0.05 frozen-base velocity regularizer, unit-norm gradient clipping, and ten
-Euler steps per rollout. Checkpoints are saved every 1,000 updates.
+The reported RL recipe performs 4,000 Adam updates at learning rate 1e-5, with four rollouts per condition, hard top-2 selection, a 0.3 real-data anchor, a 0.05 frozen-base velocity regularizer, unit-norm gradient clipping, and ten Euler steps per rollout. Checkpoints are saved every 1,000 updates.
 
 The reward checkpoint format is documented in
-[`checkpoints/README.md`](checkpoints/README.md).
+`[checkpoints/README.md](checkpoints/README.md)`.
 
 ## 3. Select and sample a checkpoint
 
 RL checkpoints must be selected using development validation only—never the
-external cohort. See [`docs/CHECKPOINT_SELECTION.md`](docs/CHECKPOINT_SELECTION.md).
+external cohort. See `[docs/CHECKPOINT_SELECTION.md](docs/CHECKPOINT_SELECTION.md)`.
 
 ```bash
 MODEL_PATH=checkpoints/rl/prob/<selected>.ckpt \
@@ -84,21 +76,25 @@ bash scripts/sample.sh
 
 ## Method-to-code alignment
 
-[`docs/METHOD_ALIGNMENT.md`](docs/METHOD_ALIGNMENT.md) maps each paper equation
+`[docs/METHOD_ALIGNMENT.md](docs/METHOD_ALIGNMENT.md)` maps each paper equation
 to its implementation and records the fixed experiment constants. Formula-level
 tests are in `tests/test_formulas.py`.
 
 ## Repository map
 
-| Path | Purpose |
-|---|---|
-| `fm_lightning.py`, `trainer.py` | Conditional FM objective and training |
-| `rl_trainier.py` | Top-\(k\) self-distillation and anchored RL loss |
-| `rewards.py` | Soft, Focal, and Utility reward equations |
-| `utils/reward_model.py` | Frozen ResNet-18 ensemble loader |
-| `inferer.py` | Euler/ODE image generation |
-| `configs/` | Exact paper FM and RL recipes |
-| `scripts/` | Data preparation, FM/RL training, and sampling |
+
+| Path                            | Purpose                                        |
+| ------------------------------- | ---------------------------------------------- |
+| `fm_lightning.py`, `trainer.py` | Conditional FM objective and training          |
+| `rl_trainier.py`                | Top-k self-distillation and anchored RL loss   |
+| `rewards.py`                    | Soft, Focal, and Utility reward equations      |
+| `utils/reward_model.py`         | Frozen ResNet-18 ensemble loader               |
+| `inferer.py`                    | Euler/ODE image generation                     |
+| `configs/`                      | Exact paper FM and RL recipes                  |
+| `scripts/`                      | Data preparation, FM/RL training, and sampling |
+
+
+
 
 ## Citation
 
@@ -106,9 +102,9 @@ tests are in `tests/test_formulas.py`.
 @article{sabouri2026taskaware,
   title   = {Task-Aware Reinforcement Learning of Flow Matching: Aligning Thyroid Scintigraphy Augmentation With Downstream Classification},
   author  = {Sabouri, Maziar and Yazdani, Milad and Bayasi, Nourhan and others},
-  journal = {IEEE Transactions on Medical Imaging},
+  journal = {TBD},
   year    = {2026},
-  note    = {Under review}
+  note    = {TBD}
 }
 ```
 
